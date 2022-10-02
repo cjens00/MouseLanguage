@@ -6,85 +6,87 @@
  */
 
 import LexicalAnalyzer.{BLANKS, DIGITS, LETTERS, NEW_LINE, PUNCTUATIONS, SPECIALS}
-import scala.io.Source
+
+import java.io.File
+import scala.io.{BufferedSource, Source}
 
 class LexicalAnalyzer(private var source: String) extends Iterable[Lexeme] {
-
   var input = ""
-  for (line <- Source.fromFile(source).getLines)
+  val fBufSource: BufferedSource = Source.fromFile(source)
+  for (line <- fBufSource.getLines)
     input += line + LexicalAnalyzer.NEW_LINE
+  fBufSource.close()
   input = input.trim
 
-  // checks if reached eof
-  private def eof: Boolean = input.length == 0
+  // Checks if reached eof
+  private def eof: Boolean = input.isEmpty
 
   var currentChar: Char = 0
 
-  // returns the current char
+  // Returns the current char
   private def getChar = {
     if (!eof)
       currentChar = input(0)
     currentChar
   }
 
-  // advances the input one character
+  // Advances the input one character
   private def nextChar: Unit = {
     if (!eof)
       input = input.substring(1)
   }
 
-  // checks if input has a blank character ahead
+  // Checks if input has a blank character ahead
   private def hasBlank: Boolean = {
     LexicalAnalyzer.BLANKS.contains(getChar)
   }
 
-  // reads the input until a non-blank character is found, updating the input
+  // Reads the input until a non-blank character is found, updating the input
   def readBlanks: Unit = {
     while (!eof && hasBlank)
       nextChar
   }
 
-  // checks if input has a letter ahead
+  // Checks if input has a letter ahead
   private def hasLetter: Boolean = {
     LexicalAnalyzer.LETTERS.contains(getChar)
   }
 
-  // checks if input has a digit ahead
+  // Checks if input has a digit ahead
   private def hasDigit: Boolean = {
     LexicalAnalyzer.DIGITS.contains(getChar)
   }
 
-  // checks if input has a special character ahead
+  // Checks if input has a special character ahead
   private def hasSpecial: Boolean = {
     LexicalAnalyzer.SPECIALS.contains(getChar)
   }
 
-  // checks if input has a punctuation character ahead
+  // Checks if input has a punctuation character ahead
   private def hasPunctuation: Boolean = {
     LexicalAnalyzer.PUNCTUATIONS.contains(getChar)
   }
 
-  // returns an iterator for the lexical analyzer
+  // Returns an iterator for the lexical analyzer
   override def iterator: Iterator[Lexeme] = {
-
     new Iterator[Lexeme] {
-
-      // returns true/false depending whether there is a lexeme to be read from the input
+      // Returns true/false depending whether there is a lexeme to be read from the input
       override def hasNext: Boolean = {
         readBlanks
         !eof
       }
 
-      // TODO: return the next lexeme (or Token.EOF if there isn't any lexeme left to be read)
       override def next(): Lexeme = {
-
         if (!hasNext)
           return new Lexeme("eof", Token.EOF)
 
-        // =====================================
         var shouldReturnLexeme: Boolean = false
         var lexemeString: String = ""
         var token: Token.Value = null
+        lazy val invalidLexString =
+          "Lexical Analyzer Error: unrecognizable symbols \"" + lexemeString + "\" found!"
+        lazy val invalidLexChar =
+          "Lexical Analyzer Error: unrecognizable symbol \"" + getChar + "\" found!"
 
         while (!shouldReturnLexeme) {
           if (hasLetter) {
@@ -115,53 +117,60 @@ class LexicalAnalyzer(private var source: String) extends Iterable[Lexeme] {
               token = Token.COMMENT
             }
             else {
-              // --------------
-              // Not a comment
-              // --------------
+              if (getChar.equals('?')) {
+                nextChar
+                lexemeString += getChar
+                if (BLANKS.contains(getChar)) token = Token.INPUT
+                else throw new Exception(invalidLexString)
+              }
+              if (getChar.equals('!')) {
+                nextChar
+                lexemeString += getChar
+                if (getChar.equals('=')) token = Token.DIFFERENT
+                else if (BLANKS.contains(getChar)) token = Token.OUTPUT
+                else throw new Exception(invalidLexString)
+              }
+
             }
             shouldReturnLexeme = true
           }
           else if (hasSpecial) {
             lexemeString += getChar
-            if (getChar.equals('=')) token = Token.ASSIGNMENT
-            if (getChar.equals('!')) {
+            if (getChar.equals('=')) {
               nextChar
               lexemeString += getChar
-              if (getChar.equals('=')) {
-                token = Token.EQUAL
-              }
-              else if (BLANKS.contains(getChar)) token = Token.OUTPUT
+              if (getChar.equals('=')) token = Token.EQUAL
+              else if (BLANKS.contains(getChar)) token = Token.ASSIGNMENT
+              else throw new Exception(invalidLexString)
             }
-            if (getChar.equals('<')) {
+            else if (getChar.equals('<')) {
               nextChar
               lexemeString += getChar
               if (getChar.equals('=')) token = Token.LESS_EQUAL
               else if (BLANKS.contains(getChar)) token = Token.LESS
+              else throw new Exception(invalidLexString)
             }
-            if (getChar.equals('>')) {
+            else if (getChar.equals('>')) {
               nextChar
               lexemeString += getChar
               if (getChar.equals('=')) token = Token.GREATER_EQUAL
               else if (BLANKS.contains(getChar)) token = Token.GREATER
+              else throw new Exception(invalidLexString)
             }
-            if (getChar.equals('?'))    token = Token.INPUT
-            if (getChar.equals('+'))    token = Token.ADDITION
-            if (getChar.equals('-'))    token = Token.SUBTRACTION
-            if (getChar.equals('*'))    token = Token.MULTIPLICATION
-            if (getChar.equals('/'))    token = Token.DIVISION
-            if (getChar.equals('%'))    token = Token.MODULUS
-
-            if (getChar.equals('('))    token = Token.OPEN_PAR
-            if (getChar.equals(')'))    token = Token.CLOSE_PAR
-            if (getChar.equals('['))    token = Token.OPEN_BRACKET
-            if (getChar.equals(']'))    token = Token.CLOSE_BRACKET
-
+            else if (getChar.equals('+')) token = Token.ADDITION
+            else if (getChar.equals('-')) token = Token.SUBTRACTION
+            else if (getChar.equals('*')) token = Token.MULTIPLICATION
+            else if (getChar.equals('/')) token = Token.DIVISION
+            else if (getChar.equals('%')) token = Token.MODULUS
+            else if (getChar.equals('(')) token = Token.OPEN_PAR
+            else if (getChar.equals(')')) token = Token.CLOSE_PAR
+            else if (getChar.equals('[')) token = Token.OPEN_BRACKET
+            else if (getChar.equals(']')) token = Token.CLOSE_BRACKET
             shouldReturnLexeme = true
           }
         }
         // Throw exception if an unrecognizable symbol is found
-        if (token == null) throw new Exception(
-          "Lexical Analyzer Error: unrecognizable symbol \"" + getChar + "\" found!")
+        if (token == null) throw new Exception(invalidLexChar)
         else {
           nextChar
           new Lexeme(lexemeString, token)
@@ -180,6 +189,12 @@ object LexicalAnalyzer {
   val SPECIALS = "<_@#$%^&()-+='\"/\\[]{}|"
 
   def main(args: Array[String]): Unit = {
+
+    val checkDir = {
+      val dir: File = new File(".")
+      dir.listFiles.filter(_.isFile).toList
+    }
+    // println(checkDir)
 
     // checks the command-line for source file
     if (args.length != 1) {
