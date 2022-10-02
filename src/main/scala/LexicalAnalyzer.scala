@@ -88,22 +88,28 @@ class LexicalAnalyzer(private var source: String) extends Iterable[Lexeme] {
 
         while (!shouldReturnLexeme) {
           if (hasLetter) {
-            lexemeString += getChar
-            nextChar
-            while (!eof && (hasLetter || hasDigit)) {
-
-            }
+            val hasIdentifierChar = hasLetter || hasDigit || getChar.equals('_')
+            do {
+              lexemeString += getChar
+              nextChar
+            } while (!eof && hasIdentifierChar)
             token = Token.IDENTIFIER
             shouldReturnLexeme = true
           }
-          else if (hasPunctuation) {
-            if (getChar.equals(':')) {
+          else if (hasDigit) {
+            do {
               lexemeString += getChar
               nextChar
-              while (!NEW_LINE.contains(getChar)) {
+            } while (hasDigit)
+            token = Token.LITERAL
+            shouldReturnLexeme = true
+          }
+          else if (hasPunctuation) {
+            if (getChar.equals(';')) {
+              do {
                 lexemeString += getChar
                 nextChar
-              }
+              } while (!NEW_LINE.contains(getChar))
               // Consume again for windows CRLF
               if (getChar == '\r') nextChar
               token = Token.COMMENT
@@ -115,10 +121,41 @@ class LexicalAnalyzer(private var source: String) extends Iterable[Lexeme] {
             }
             shouldReturnLexeme = true
           }
-          else if (hasDigit) {
-            shouldReturnLexeme = true
-          }
           else if (hasSpecial) {
+            lexemeString += getChar
+            if (getChar.equals('=')) token = Token.ASSIGNMENT
+            if (getChar.equals('!')) {
+              nextChar
+              lexemeString += getChar
+              if (getChar.equals('=')) {
+                token = Token.EQUAL
+              }
+              else if (BLANKS.contains(getChar)) token = Token.OUTPUT
+            }
+            if (getChar.equals('<')) {
+              nextChar
+              lexemeString += getChar
+              if (getChar.equals('=')) token = Token.LESS_EQUAL
+              else if (BLANKS.contains(getChar)) token = Token.LESS
+            }
+            if (getChar.equals('>')) {
+              nextChar
+              lexemeString += getChar
+              if (getChar.equals('=')) token = Token.GREATER_EQUAL
+              else if (BLANKS.contains(getChar)) token = Token.GREATER
+            }
+            if (getChar.equals('?'))    token = Token.INPUT
+            if (getChar.equals('+'))    token = Token.ADDITION
+            if (getChar.equals('-'))    token = Token.SUBTRACTION
+            if (getChar.equals('*'))    token = Token.MULTIPLICATION
+            if (getChar.equals('/'))    token = Token.DIVISION
+            if (getChar.equals('%'))    token = Token.MODULUS
+
+            if (getChar.equals('('))    token = Token.OPEN_PAR
+            if (getChar.equals(')'))    token = Token.CLOSE_PAR
+            if (getChar.equals('['))    token = Token.OPEN_BRACKET
+            if (getChar.equals(']'))    token = Token.CLOSE_BRACKET
+
             shouldReturnLexeme = true
           }
         }
