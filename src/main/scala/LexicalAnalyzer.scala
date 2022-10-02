@@ -6,8 +6,6 @@
  */
 
 import LexicalAnalyzer.{BLANKS, DIGITS, LETTERS, NEW_LINE, PUNCTUATIONS, SPECIALS}
-
-import java.io.File
 import scala.io.{BufferedSource, Source}
 
 class LexicalAnalyzer(private var source: String) extends Iterable[Lexeme] {
@@ -77,103 +75,120 @@ class LexicalAnalyzer(private var source: String) extends Iterable[Lexeme] {
       }
 
       override def next(): Lexeme = {
+        var symbol: String = ""
+        var token: Token.Value = null
+        lazy val invalidSymbolString =
+          "Lexical Analyzer Error: unrecognizable symbol (multi-char) \"" + symbol + "\" found!"
+        lazy val invalidSymbolChar =
+          "Lexical Analyzer Error: unrecognizable symbol \"" + getChar + "\" found!"
+
+        readBlanks
         if (!hasNext)
           return new Lexeme("eof", Token.EOF)
 
-        var shouldReturnLexeme: Boolean = false
-        var lexemeString: String = ""
-        var token: Token.Value = null
-        lazy val invalidLexString =
-          "Lexical Analyzer Error: unrecognizable symbols \"" + lexemeString + "\" found!"
-        lazy val invalidLexChar =
-          "Lexical Analyzer Error: unrecognizable symbol \"" + getChar + "\" found!"
-
-        while (!shouldReturnLexeme) {
-          if (hasLetter) {
-            val hasIdentifierChar = hasLetter || hasDigit || getChar.equals('_')
+        if (hasLetter) {
+          lazy val hasIdentifierChar =
+            hasLetter || hasDigit || getChar.equals('_')
+          do {
+            symbol += getChar
+            nextChar
+          } while (!eof && hasIdentifierChar)
+          token = Token.IDENTIFIER
+          if (getChar.equals('.')) return new Lexeme(symbol, token)
+        }
+        else if (hasDigit) {
+          do {
+            symbol += getChar
+            nextChar
+          } while (hasDigit)
+          token = Token.LITERAL
+        }
+        else if (hasPunctuation) {
+          if (getChar.equals(';')) {
             do {
-              lexemeString += getChar
+              symbol += getChar
               nextChar
-            } while (!eof && hasIdentifierChar)
-            token = Token.IDENTIFIER
-            shouldReturnLexeme = true
+            } while (!NEW_LINE.contains(getChar))
+            token = Token.COMMENT
           }
-          else if (hasDigit) {
-            do {
-              lexemeString += getChar
-              nextChar
-            } while (hasDigit)
-            token = Token.LITERAL
-            shouldReturnLexeme = true
+          else if (getChar.equals('?')) {
+            symbol += getChar
+            nextChar
+            if (BLANKS.contains(getChar)) token = Token.INPUT
+            else throw new Exception(invalidSymbolString)
           }
-          else if (hasPunctuation) {
-            if (getChar.equals(';')) {
-              do {
-                lexemeString += getChar
-                nextChar
-              } while (!NEW_LINE.contains(getChar))
-              // Consume again for windows CRLF
-              if (getChar == '\r') nextChar
-              token = Token.COMMENT
-            }
-            else {
-              if (getChar.equals('?')) {
-                nextChar
-                lexemeString += getChar
-                if (BLANKS.contains(getChar)) token = Token.INPUT
-                else throw new Exception(invalidLexString)
-              }
-              if (getChar.equals('!')) {
-                nextChar
-                lexemeString += getChar
-                if (getChar.equals('=')) token = Token.DIFFERENT
-                else if (BLANKS.contains(getChar)) token = Token.OUTPUT
-                else throw new Exception(invalidLexString)
-              }
-
-            }
-            shouldReturnLexeme = true
+          else if (getChar.equals('!')) {
+            symbol += getChar
+            nextChar
+            if (getChar.equals('=')) token = Token.DIFFERENT
+            else if (BLANKS.contains(getChar)) token = Token.OUTPUT
+            else throw new Exception(invalidSymbolString)
           }
-          else if (hasSpecial) {
-            lexemeString += getChar
-            if (getChar.equals('=')) {
-              nextChar
-              lexemeString += getChar
-              if (getChar.equals('=')) token = Token.EQUAL
-              else if (BLANKS.contains(getChar)) token = Token.ASSIGNMENT
-              else throw new Exception(invalidLexString)
-            }
-            else if (getChar.equals('<')) {
-              nextChar
-              lexemeString += getChar
-              if (getChar.equals('=')) token = Token.LESS_EQUAL
-              else if (BLANKS.contains(getChar)) token = Token.LESS
-              else throw new Exception(invalidLexString)
-            }
-            else if (getChar.equals('>')) {
-              nextChar
-              lexemeString += getChar
-              if (getChar.equals('=')) token = Token.GREATER_EQUAL
-              else if (BLANKS.contains(getChar)) token = Token.GREATER
-              else throw new Exception(invalidLexString)
-            }
-            else if (getChar.equals('+')) token = Token.ADDITION
-            else if (getChar.equals('-')) token = Token.SUBTRACTION
-            else if (getChar.equals('*')) token = Token.MULTIPLICATION
-            else if (getChar.equals('/')) token = Token.DIVISION
-            else if (getChar.equals('%')) token = Token.MODULUS
-            else if (getChar.equals('(')) token = Token.OPEN_PAR
-            else if (getChar.equals(')')) token = Token.CLOSE_PAR
-            else if (getChar.equals('[')) token = Token.OPEN_BRACKET
-            else if (getChar.equals(']')) token = Token.CLOSE_BRACKET
-            shouldReturnLexeme = true
+          else if (getChar.equals('.')) {
+            symbol += getChar
+            token = Token.DOT
           }
         }
+        else if (hasSpecial) {
+          symbol += getChar
+          if (getChar.equals('=')) {
+            nextChar
+            if (getChar.equals('=')) {
+              symbol += getChar
+              token = Token.EQUAL
+            }
+            else token = Token.ASSIGNMENT
+          }
+          else if (getChar.equals('<')) {
+            nextChar
+            symbol += getChar
+            if (getChar.equals('=')) token = Token.LESS_EQUAL
+            else if (BLANKS.contains(getChar)) token = Token.LESS
+          }
+          else if (getChar.equals('>')) {
+            nextChar
+            if (getChar.equals('=')) {
+              symbol += getChar
+              token = Token.GREATER_EQUAL
+            }
+            else token = Token.GREATER
+          }
+          else if (getChar.equals('"')) {
+            nextChar
+            while (!getChar.equals('"')) {
+              symbol += getChar
+              nextChar
+            }
+            symbol += getChar
+            token = Token.STRING
+          }
+          else if (getChar.equals('+')) token = Token.ADDITION
+          else if (getChar.equals('-')) token = Token.SUBTRACTION
+          else if (getChar.equals('*')) token = Token.MULTIPLICATION
+          else if (getChar.equals('/')) token = Token.DIVISION
+          else if (getChar.equals('%')) token = Token.MODULUS
+
+          else if (getChar.equals('(')) token = Token.OPEN_PAR
+          else if (getChar.equals(')')) token = Token.CLOSE_PAR
+          else if (getChar.equals('[')) token = Token.OPEN_BRACKET
+          else if (getChar.equals(']')) token = Token.CLOSE_BRACKET
+
+          else if (getChar.equals('^')) token = Token.BREAK
+          else if (getChar.equals('$')) {
+            nextChar
+            symbol += getChar
+            if (getChar.equals('$')) token = Token.EO_PRG
+          }
+        }
+
         // Throw exception if an unrecognizable symbol is found
-        if (token == null) throw new Exception(invalidLexChar)
+        if (token == null) {
+          println(getChar)
+          throw new Exception(invalidSymbolChar)
+        }
         else {
           nextChar
-          new Lexeme(lexemeString, token)
+          new Lexeme(symbol, token)
         }
       }
     }
@@ -182,31 +197,25 @@ class LexicalAnalyzer(private var source: String) extends Iterable[Lexeme] {
 
 object LexicalAnalyzer {
   val BLANKS = " \n\t"
-  val NEW_LINE = "\r\n"
+  val NEW_LINE = "\n"
   val LETTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
   val DIGITS = "0123456789"
   val PUNCTUATIONS = ".,;:?!"
-  val SPECIALS = "<_@#$%^&()-+='\"/\\[]{}|"
+  val SPECIALS = "><_*@#$%^&()-+='\"/\\[]{}|"
 
   def main(args: Array[String]): Unit = {
 
-    val checkDir = {
-      val dir: File = new File(".")
-      dir.listFiles.filter(_.isFile).toList
-    }
-    // println(checkDir)
-
-    // checks the command-line for source file
+    // Checks the command - line for source file
     if (args.length != 1) {
       print("Missing source file!")
       System.exit(1)
     }
 
-    // iterates over the lexical analyzer, printing the lexemes found
+    // Iterates over the lexical analyzer, printing the lexemes found
     val lex = new LexicalAnalyzer(args(0))
     val it = lex.iterator
     while (it.hasNext)
       println(it.next())
 
-  } // end main method
+  } // End main method
 }
