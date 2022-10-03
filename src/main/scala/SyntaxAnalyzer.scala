@@ -24,31 +24,31 @@ class SyntaxAnalyzer(private var source: String) {
 
   // returns true if the given token identifies a statement (or the beginning of a statement)
   private def isStatement(token: Token.Value): Boolean = {
-    token == Token.IDENTIFIER     ||
-    token == Token.LITERAL        ||
-    token == Token.STRING         ||
-    token == Token.INPUT          ||
-    token == Token.OUTPUT         ||
-    token == Token.ASSIGNMENT     ||
-    token == Token.ADDITION       ||
-    token == Token.SUBTRACTION    ||
-    token == Token.MULTIPLICATION ||
-    token == Token.DIVISION       ||
-    token == Token.MODULUS        ||
-    token == Token.LESS           ||
-    token == Token.LESS_EQUAL     ||
-    token == Token.GREATER        ||
-    token == Token.GREATER_EQUAL  ||
-    token == Token.EQUAL          ||
-    token == Token.DIFFERENT      ||
-    token == Token.BREAK          ||
-    token == Token.DOT            ||
-    token == Token.OPEN_BRACKET   ||
-    token == Token.OPEN_PAR
+    token == Token.IDENTIFIER ||
+      token == Token.LITERAL ||
+      token == Token.STRING ||
+      token == Token.INPUT ||
+      token == Token.OUTPUT ||
+      token == Token.ASSIGNMENT ||
+      token == Token.ADDITION ||
+      token == Token.SUBTRACTION ||
+      token == Token.MULTIPLICATION ||
+      token == Token.DIVISION ||
+      token == Token.MODULUS ||
+      token == Token.LESS ||
+      token == Token.LESS_EQUAL ||
+      token == Token.GREATER ||
+      token == Token.GREATER_EQUAL ||
+      token == Token.EQUAL ||
+      token == Token.DIFFERENT ||
+      token == Token.BREAK ||
+      token == Token.DOT ||
+      token == Token.OPEN_BRACKET ||
+      token == Token.OPEN_PAR
   }
 
   // returns true if the given token identifies a line (or the beginning of a line)
-  // a line can be a statement or a comma
+  // a line can be a statement or a comma -- comment?
   private def isLine(token: Token.Value): Boolean = {
     isStatement(token) || token == Token.COMMENT
   }
@@ -58,15 +58,27 @@ class SyntaxAnalyzer(private var source: String) {
     parseMouse
   }
 
-  // TODO: mouse = { line } ´$$´
+  // mouse program is: 0+ lines followed by EO_PRG
   private def parseMouse: Node = {
     val node = new Node(new Lexeme("mouse"))
-    node
+    while (it.hasNext) {
+      nextLexeme
+      var lexeme = getLexeme
+      if (isLine(lexeme.token))
+        parseLine
+      else if (lexeme.token.equals(Token.EO_PRG)) {
+        node.add(new Node(lexeme))
+      }
+      else throw new Exception(
+        "Syntax Analyzer Error: Syntax incorrect, expected Lexeme($$, EO_PRG)")
+    }
+    return node
   }
 
-  // TODO: line = statement | comment
   private def parseLine: Node = {
     val node = new Node(new Lexeme("line"))
+    if (isStatement(getLexeme.token)) parseStatement
+    else node.add(new Node(getLexeme))
     node
   }
 
@@ -93,12 +105,12 @@ object SyntaxAnalyzer {
   def main(args: Array[String]): Unit = {
 
     // check if source file was passed through the command-line
-    if (args.length != 1) {
-      print("Missing source file!")
-      System.exit(1)
-    }
+    // if (args.length != 1) {
+    //    print("Missing source file!")
+    //    System.exit(1)
+    // }
 
-    val syntaxAnalyzer = new SyntaxAnalyzer(args(0))
+    val syntaxAnalyzer = new SyntaxAnalyzer("./src/main/resources/mouse/programs/example0.mouse") // args(0)
     val parseTree = syntaxAnalyzer.parse
     print(parseTree)
   }

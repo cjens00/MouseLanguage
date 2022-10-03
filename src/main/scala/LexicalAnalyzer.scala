@@ -205,11 +205,11 @@ object LexicalAnalyzer {
 
   def main(args: Array[String]): Unit = {
 
-    // Checks the command - line for source file
-    if (args.length != 1) {
-      print("Missing source file!")
-      System.exit(1)
-    }
+     // Checks the command-line for source file
+        if (args.length != 1) {
+          print("Missing source file!")
+          System.exit(1)
+        }
 
     // Iterates over the lexical analyzer, printing the lexemes found
     val lex = new LexicalAnalyzer(args(0))
