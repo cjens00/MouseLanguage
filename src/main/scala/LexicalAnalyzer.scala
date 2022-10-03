@@ -160,6 +160,7 @@ class LexicalAnalyzer(private var source: String) extends Iterable[Lexeme] {
             }
             symbol += getChar
             token = Token.STRING
+            symbol.filter((c: Char) => !c.equals('"'))
           }
           else if (getChar.equals('+')) token = Token.ADDITION
           else if (getChar.equals('-')) token = Token.SUBTRACTION

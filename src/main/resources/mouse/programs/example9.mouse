@@ -3,11 +3,10 @@
 ; Description: computes nCk (number of ways to select r items from a set of n items where the order of selection does not matter).
 ; Student(s) Name(s): Cameron Jensen
 
-; N "n = " ? =
-; R "r = " ? =
-
-N ? "n = " =
-R ? "r = " =
+"n = "
+N ? =
+"r = "
+R ? =
 M N. R. - =
 
 N. 0 > [
