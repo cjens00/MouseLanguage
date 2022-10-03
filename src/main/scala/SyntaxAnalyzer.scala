@@ -1,3 +1,5 @@
+import scala.util.control.Breaks._
+
 /*
  * CS3210 - Principles of Programming Languages - Fall 2022
  * Instructor: Thyago Mota
@@ -58,45 +60,71 @@ class SyntaxAnalyzer(private var source: String) {
     parseMouse
   }
 
-  // mouse program is: 0+ lines followed by EO_PRG
   private def parseMouse: Node = {
     val node = new Node(new Lexeme("mouse"))
     while (it.hasNext) {
       nextLexeme
       var lexeme = getLexeme
       if (isLine(lexeme.token))
-        parseLine
+        node.add(parseLine)
       else if (lexeme.token.equals(Token.EO_PRG)) {
         node.add(new Node(lexeme))
       }
-      else throw new Exception(
-        "Syntax Analyzer Error: Syntax incorrect, expected Lexeme($$, EO_PRG)")
+      else throw new Exception("Syntax Error: expected Lexeme($$, EO_PRG)")
     }
-    return node
+    node
   }
 
   private def parseLine: Node = {
     val node = new Node(new Lexeme("line"))
-    if (isStatement(getLexeme.token)) parseStatement
+    var lexeme = getLexeme
+    if (isStatement(lexeme.token)) node.add(parseStatement)
     else node.add(new Node(getLexeme))
     node
   }
 
-  // TODO: statement = ´?´ | ´!´ | string | identifier | ´=´ | literal | ´+´ | ´-´ | ´*´ | ´/´ | ´%´ | ´<´ | ´<=´ | ´>´ | ´>=´ | ´==´ | ´!=´ | ´^´ | ´.´ |  | if | while
   private def parseStatement: Node = {
     val node = new Node(new Lexeme("statement"))
+    var lexeme = getLexeme
+    if (lexeme.token.equals(Token.OPEN_BRACKET)) node.add(parseIf)
+    else if (lexeme.token.equals(Token.OPEN_PAR)) node.add(parseWhile)
+    else node.add(new Node(lexeme))
     node
   }
 
-  // TODO: if = ´[´ { line } ´]´
   def parseIf: Node = {
     val node = new Node(new Lexeme("if"))
+    var lexeme: Lexeme = null
+    breakable {
+      while (it.hasNext) {
+        nextLexeme
+        lexeme = getLexeme
+        if (isLine(lexeme.token)) node.add(parseLine)
+        else if (lexeme.token.equals(Token.CLOSE_BRACKET)) {
+          node.add(new Node(lexeme))
+          break
+        }
+        else throw new Exception("Syntax Error: expected line or ']'")
+      }
+    }
     node
   }
 
-  // TODO: while = ´(´ { line } ´)´
   def parseWhile: Node = {
     val node = new Node(new Lexeme("while"))
+    var lexeme: Lexeme = null
+    breakable {
+      while (it.hasNext) {
+        nextLexeme
+        lexeme = getLexeme
+        if (isLine(lexeme.token)) node.add(parseLine)
+        else if (lexeme.token.equals(Token.CLOSE_PAR)) {
+          node.add(new Node(lexeme))
+          break
+        }
+        else throw new Exception("Syntax Error: expected line or ')'")
+      }
+    }
     node
   }
 }
@@ -105,12 +133,12 @@ object SyntaxAnalyzer {
   def main(args: Array[String]): Unit = {
 
     // check if source file was passed through the command-line
-    // if (args.length != 1) {
-    //    print("Missing source file!")
-    //    System.exit(1)
-    // }
+    if (args.length != 1) {
+      print("Missing source file!")
+      System.exit(1)
+    }
 
-    val syntaxAnalyzer = new SyntaxAnalyzer("./src/main/resources/mouse/programs/example0.mouse") // args(0)
+    val syntaxAnalyzer = new SyntaxAnalyzer(args(0))
     val parseTree = syntaxAnalyzer.parse
     print(parseTree)
   }
