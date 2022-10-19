@@ -70,7 +70,9 @@ class SyntaxAnalyzer(private var source: String) {
       else if (lexeme.token.equals(Token.EO_PRG)) {
         node.add(new Node(lexeme))
       }
-      else throw new Exception("Syntax Error: expected Lexeme($$, EO_PRG)")
+      else {
+        throw new Exception("Syntax Error: expected Lexeme($$, EO_PRG)")
+      }
     }
     node
   }
