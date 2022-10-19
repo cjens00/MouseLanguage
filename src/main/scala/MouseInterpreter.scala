@@ -14,6 +14,7 @@ class MouseInterpreter(private var parseTree: Node) {
   final val DEBUG = true
   private val stack = mutable.Stack[Int]()
   private val memory = mutable.LinkedHashMap[String, Int]()
+  // Note: Private to prevent escaping scope error
   private val InterpretString = (lexeme: Lexeme) => {
     print(lexeme.label)
   }
